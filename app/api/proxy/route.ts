@@ -30,12 +30,20 @@ export async function GET(req: NextRequest) {
     }
 
     const headers = new Headers();
-    upstreamRes.headers.forEach((value, key) => {
-      headers.set(key, value);
-    });
+    const contentType = upstreamRes.headers.get('Content-Type') || 'video/mp4';
+
+    // Set VLC-compatible headers explicitly
+    headers.set('Content-Type', contentType);
+    headers.set('Accept-Ranges', 'bytes');
+
+    const contentRange = upstreamRes.headers.get('Content-Range');
+    if (contentRange) headers.set('Content-Range', contentRange);
+
+    const contentLength = upstreamRes.headers.get('Content-Length');
+    if (contentLength) headers.set('Content-Length', contentLength);
 
     return new Response(upstreamRes.body, {
-      status: upstreamRes.status,
+      status: upstreamRes.status === 200 && range ? 206 : upstreamRes.status,
       headers,
     });
   } catch (err) {
